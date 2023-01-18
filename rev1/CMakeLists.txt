@@ -1,4 +1,7 @@
-add_executable(yuiopPD_rev1 main.c)
+add_executable(yuiopPD_rev1
+    main.c
+	usb_descriptors.c
+    )
 
 pico_set_program_name(yuiopPD_rev1 "yuiopPD rev.1")
 pico_set_program_url(yuiopPD_rev1 "https://github.com/koron/yuiopPD")
@@ -16,9 +19,11 @@ target_compile_definitions(yuiopPD_rev1 PRIVATE
 )
 
 target_link_libraries(yuiopPD_rev1
-    pmw3360
-    pico_stdlib
     hardware_spi
+    pico_binary_info
+    pico_stdlib
+    pmw3360
+    tinyusb_device
     )
 
 pico_add_extra_outputs(yuiopPD_rev1)
