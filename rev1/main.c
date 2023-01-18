@@ -43,8 +43,6 @@ bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
 
 const uint button_pins[] = { 26, 27, 28, 29, 6, 7 };
 static uint32_t button_masks = 0;
-static int16_t mouse_x = 0;
-static int16_t mouse_y = 0;
 
 // Invoked when received GET_REPORT control request
 //
@@ -68,6 +66,9 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
     }
 }
 
+static int16_t mouse_x = 0;
+static int16_t mouse_y = 0;
+
 static void report_mouse(uint64_t now) {
     if (!tud_hid_n_ready(ITF_NUM_HID)) {
         return;
@@ -82,9 +83,9 @@ static void report_mouse(uint64_t now) {
     if (mouse_x >= 127) {
         mouse_x -= 127;
         x = 127;
-    } else if (mouse_x <= -128) {
-        mouse_x += 128;
-        x = -128;
+    } else if (mouse_x <= -127) {
+        mouse_x += 127;
+        x = -127;
     } else {
         x = mouse_x;
         mouse_x = 0;
@@ -93,9 +94,9 @@ static void report_mouse(uint64_t now) {
     if (mouse_y >= 127) {
         mouse_y -= 127;
         y = 127;
-    } else if (mouse_y <= -128) {
-        mouse_y += 128;
-        y = -128;
+    } else if (mouse_y <= -127) {
+        mouse_y += 127;
+        y = -127;
     } else {
         y = mouse_y;
         mouse_y = 0;
@@ -160,21 +161,25 @@ int main() {
     while(true) {
         uint64_t now = time_us_64();
 
-        pmw3360_motion_t curr;
-        if (pmw3360_read_motion_burst(&ball, &curr)) {
-            //printf("motion: dx=%d dy=%d at %llu\n", curr.dx, curr.dy, now);
-            mouse_x += curr.dy;
-            mouse_y += curr.dx;
-        } else if ((curr.mot & 0x80) == 0x00) {
-            // Set motion burst mode, again
-            pmw3360_reg_write(&ball, PMW3360_REGADDR_MOTION_BURST, 0);
-        }
+        // Read motion data from PMW3360 optical sensor.
+        pmw3360_motion_t mot = {0};
+        // PMW3360's motion burst fails without writing the register sometimes.
+        //pmw3360_reg_write(&ball, PMW3360_REGADDR_MOTION_BURST, 0);
+        bool mot_read = pmw3360_read_motion_burst(&ball, &mot);
 
-        uint32_t button_states = gpio_get_all() & button_masks ^ button_masks;
-        if (button_states != button_states_last) {
-            button_states_last = button_states;
-            //printf("buttons: %08x\n", button_states);
+        // Read button states. On GPIO, 0 means ON and 1 mesn OFF for buttons.
+        // These operations reset uninterested bits and invert bits of buttons.
+        uint32_t buttons = gpio_get_all() & button_masks ^ button_masks;
+
+        // accumulate motion delta.
+        if (mot_read) {
+            mouse_x += mot.dy;
+            mouse_y += mot.dx;
+            xiao_led_set_all(false, true, false);
+        } else {
+            xiao_led_set_all(false, false, true);
         }
+        // TODO: debounce buttons.
 
         report_mouse(now);
         tud_task();
