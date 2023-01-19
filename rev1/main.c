@@ -107,6 +107,30 @@ static void report_mouse(uint64_t now) {
     }
 }
 
+static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
+    // Limitate scan rate: 1000/sec
+    static uint64_t last = 0;
+    if ((now - last) < 1000) {
+        return;
+    }
+    last = now;
+
+#if 1
+    // PMW3360's motion burst fails without writing the register sometimes.
+    pmw3360_reg_write(ball, PMW3360_REGADDR_MOTION_BURST, 0);
+#endif
+
+    // Read motion data from PMW3360 optical sensor, and accumulate it.
+    pmw3360_motion_t mot = {0};
+    if (pmw3360_read_motion_burst(ball, &mot)) {
+        mouse_x += mot.dy;
+        mouse_y += mot.dx;
+        xiao_led_set_all(false, true, false);
+    } else {
+        xiao_led_set_all(false, false, true);
+    }
+}
+
 int main() {
     xiao_led_init();
     xiao_led_set_all(false, true, false);
@@ -159,25 +183,12 @@ int main() {
     while(true) {
         uint64_t now = time_us_64();
 
-        // Read motion data from PMW3360 optical sensor.
-        pmw3360_motion_t mot = {0};
-        // PMW3360's motion burst fails without writing the register sometimes.
-        pmw3360_reg_write(&ball, PMW3360_REGADDR_MOTION_BURST, 0);
-        bool mot_read = pmw3360_read_motion_burst(&ball, &mot);
-        // TODO: reduce scan rate: 1000/sec
+        trackball_task(now, &ball);
 
-        // accumulate motion delta.
-        if (mot_read) {
-            mouse_x += mot.dy;
-            mouse_y += mot.dx;
-            xiao_led_set_all(false, true, false);
-        } else {
-            xiao_led_set_all(false, false, true);
-        }
-
+        // Read direct pins as button.
         uint32_t status = gpio_get_all();
 
-        // debounce buttons.
+        // Debounce buttons.
         for (int i = 0; i < count_of(mouse_buttons); i++) {
             bool curr = (status & (1 << mouse_buttons[i].pin)) == 0;
             if (curr != mouse_buttons[i].pressed && (now - mouse_buttons[i].changed_at) > 10*1000) {

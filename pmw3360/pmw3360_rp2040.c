@@ -6,15 +6,15 @@
 #include "pmw3360_rp2040.h"
 
 static inline void cs_select(pmw3360_inst_t *p) {
-    asm volatile("nop \n nop \n nop");
+    //asm volatile("nop \n nop \n nop");
     gpio_put(p->csn, 0);
-    asm volatile("nop \n nop \n nop");
+    //asm volatile("nop \n nop \n nop");
 }
 
 static inline void cs_deselect(pmw3360_inst_t *p) {
-    asm volatile("nop \n nop \n nop");
+    //asm volatile("nop \n nop \n nop");
     gpio_put(p->csn, 1);
-    asm volatile("nop \n nop \n nop");
+    //asm volatile("nop \n nop \n nop");
 }
 
 uint8_t pmw3360_reg_read(pmw3360_inst_t *p, uint8_t addr) {
