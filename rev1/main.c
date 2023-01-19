@@ -46,9 +46,9 @@ typedef struct {
     bool pressed;
     uint64_t changed_at;
     int mouse_button;
-} button_t;
+} direct_button_t;
 
-static button_t mouse_buttons[] = {
+static direct_button_t direct_buttons[] = {
     { .pin = 26, .pressed = false, .changed_at = 0, .mouse_button =  0 },
     { .pin = 27, .pressed = false, .changed_at = 0, .mouse_button =  1 },
     { .pin = 28, .pressed = false, .changed_at = 0, .mouse_button = -1 },
@@ -72,8 +72,8 @@ static void report_mouse(uint64_t now) {
     int8_t v = 0;
     int8_t h = 0;
 
-    for (int i = 0; i < count_of(mouse_buttons); i++) {
-        button_t b = mouse_buttons[i];
+    for (int i = 0; i < count_of(direct_buttons); i++) {
+        direct_button_t b = direct_buttons[i];
         if (b.pressed && b.mouse_button >= 0) {
             btns |= 1 << b.mouse_button;
         }
@@ -131,6 +131,19 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     }
 }
 
+static void direct_button_task(uint64_t now) {
+    // Read direct pins as button.
+    uint32_t status = gpio_get_all();
+    // Debounce buttons.
+    for (int i = 0; i < count_of(direct_buttons); i++) {
+        bool curr = (status & (1 << direct_buttons[i].pin)) == 0;
+        if (curr != direct_buttons[i].pressed && (now - direct_buttons[i].changed_at) > 10*1000) {
+            direct_buttons[i].pressed = curr;
+            direct_buttons[i].changed_at = now;
+        }
+    }
+}
+
 int main() {
     xiao_led_init();
     xiao_led_set_all(false, true, false);
@@ -154,8 +167,8 @@ int main() {
     }
 
     // Initialize pins for button.
-    for (int i = 0; i < count_of(mouse_buttons); i++) {
-        uint pin = mouse_buttons[i].pin;
+    for (int i = 0; i < count_of(direct_buttons); i++) {
+        uint pin = direct_buttons[i].pin;
         gpio_init(pin);
         gpio_set_dir(pin, GPIO_IN);
         gpio_pull_up(pin);
@@ -182,24 +195,10 @@ int main() {
 
     while(true) {
         uint64_t now = time_us_64();
-
         trackball_task(now, &ball);
-
-        // Read direct pins as button.
-        uint32_t status = gpio_get_all();
-
-        // Debounce buttons.
-        for (int i = 0; i < count_of(mouse_buttons); i++) {
-            bool curr = (status & (1 << mouse_buttons[i].pin)) == 0;
-            if (curr != mouse_buttons[i].pressed && (now - mouse_buttons[i].changed_at) > 10*1000) {
-                mouse_buttons[i].pressed = curr;
-                mouse_buttons[i].changed_at = now;
-                //printf("button#%d changed to %s at %llu\n", i, curr ? "ON" : "OFF", now);
-            }
-        }
-        // TODO: clean up button management.
-
+        direct_button_task(now);
         report_mouse(now);
+
         tud_task();
     }
 }
