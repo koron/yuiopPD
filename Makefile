@@ -17,3 +17,8 @@ distclean:
 .PHONY: tags
 tags:
 	ctags --exclude=build/* --exclude=tmp/* -R .
+
+.PHONY: install
+install:
+	make -j8 -C build
+	cp ./build/rev1/yuiopPD_rev1.uf2 /e/
