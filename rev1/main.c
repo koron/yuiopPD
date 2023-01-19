@@ -41,31 +41,6 @@ void xiao_led_set_all(bool red, bool green, bool blue) {
 bi_decl(bi_program_feature("USB Mouse"));
 bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
 
-const uint button_pins[] = { 26, 27, 28, 29, 6, 7 };
-static uint32_t button_masks = 0;
-
-// Invoked when received GET_REPORT control request
-//
-// Application must fill buffer report's content and return its length.
-// Return zero will cause the stack to STALL request.
-uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
-    printf("unhandle HID get report: instance=%d id=%d type=%d buf[0]=%02x len=%d\n", instance, report_id, report_type, buffer[0], reqlen);
-    return reqlen;
-}
-
-// Invoked when received SET_REPORT control request or received data on OUT
-// endpoint ( Report ID = 0, Type = 0 )
-void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {
-    // dump unknown reports.
-    printf("unknown HID set report: instance=%d id=%d type=%d size=%d\n", instance, report_id, report_type, bufsize);
-    for (uint16_t i = 0; i < bufsize; i++) {
-        printf(" %02x", buffer[i]);
-        if ((i+1) % 16 == 0 || i == bufsize-1) {
-            printf("\n");
-        }
-    }
-}
-
 typedef struct {
     uint pin;
     bool pressed;
@@ -155,12 +130,11 @@ int main() {
     }
 
     // Initialize pins for button.
-    for (int i = 0; i < count_of(button_pins); i++) {
-        uint pin = button_pins[i];
+    for (int i = 0; i < count_of(mouse_buttons); i++) {
+        uint pin = mouse_buttons[i].pin;
         gpio_init(pin);
         gpio_set_dir(pin, GPIO_IN);
         gpio_pull_up(pin);
-        button_masks |= 1 << pin;
     }
 
     // Initialize the trackball module.
@@ -179,9 +153,9 @@ int main() {
     // Set motion burst mode.
     pmw3360_reg_write(&ball, PMW3360_REGADDR_MOTION_BURST, 0);
 
+    // Start main loop.
     xiao_led_set_all(false, false, true);
 
-    uint64_t button_states_last = 0;
     while(true) {
         uint64_t now = time_us_64();
 
@@ -201,13 +175,11 @@ int main() {
             xiao_led_set_all(false, false, true);
         }
 
-        // Read button states. On GPIO, 0 means ON and 1 mesn OFF for buttons.
-        // These operations reset uninterested bits and invert bits of buttons.
-        uint32_t buttons = gpio_get_all() & button_masks ^ button_masks;
+        uint32_t status = gpio_get_all();
 
         // debounce buttons.
         for (int i = 0; i < count_of(mouse_buttons); i++) {
-            bool curr = (buttons & (1 << mouse_buttons[i].pin)) != 0;
+            bool curr = (status & (1 << mouse_buttons[i].pin)) == 0;
             if (curr != mouse_buttons[i].pressed && (now - mouse_buttons[i].changed_at) > 10*1000) {
                 mouse_buttons[i].pressed = curr;
                 mouse_buttons[i].changed_at = now;

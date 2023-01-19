@@ -1,5 +1,6 @@
 add_executable(yuiopPD_rev1
     main.c
+    tud_callbacks.c
 	usb_descriptors.c
     )
 
