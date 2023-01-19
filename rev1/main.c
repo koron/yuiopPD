@@ -61,6 +61,22 @@ static int16_t mouse_x = 0;
 static int16_t mouse_y = 0;
 static int8_t mouse_last_btns = false;
 
+// add16 adds two int16_t with clipping.
+static int16_t add16(int16_t a, int16_t b) {
+    int16_t r = a + b;
+    if (a >= 0 && b >= 0 && r < 0) {
+        r = 32767;
+    } else if (a < 0 && b < 0 && r >= 0) {
+        r = -32768;
+    }
+    return r;
+}
+
+// clip2int8 clips an integer fit into int8_t.
+static inline int8_t clip2int8(int16_t v) {
+    return (v) < -127 ? -127 : (v) > 127 ? 127 : (int8_t)v;
+}
+
 static void report_mouse(uint64_t now) {
     if (!tud_hid_n_ready(ITF_NUM_HID)) {
         return;
@@ -79,27 +95,10 @@ static void report_mouse(uint64_t now) {
         }
     }
 
-    if (mouse_x >= 127) {
-        mouse_x -= 127;
-        x = 127;
-    } else if (mouse_x <= -127) {
-        mouse_x += 127;
-        x = -127;
-    } else {
-        x = mouse_x;
-        mouse_x = 0;
-    }
-
-    if (mouse_y >= 127) {
-        mouse_y -= 127;
-        y = 127;
-    } else if (mouse_y <= -127) {
-        mouse_y += 127;
-        y = -127;
-    } else {
-        y = mouse_y;
-        mouse_y = 0;
-    }
+    x = clip2int8(mouse_x);
+    y = clip2int8(mouse_y);
+    mouse_x -= x;
+    mouse_y -= y;
 
     if (x != 0 || y != 0 || v != 0 || h != 0 || btns != mouse_last_btns) {
         tud_hid_n_mouse_report(ITF_NUM_HID, REPORT_ID_MOUSE, btns, x, y, v, h);
@@ -123,8 +122,8 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     // Read motion data from PMW3360 optical sensor, and accumulate it.
     pmw3360_motion_t mot = {0};
     if (pmw3360_read_motion_burst(ball, &mot)) {
-        mouse_x += mot.dy;
-        mouse_y += mot.dx;
+        mouse_x = add16(mouse_x, mot.dy);
+        mouse_y = add16(mouse_y, mot.dx);
         xiao_led_set_all(false, true, false);
     } else {
         xiao_led_set_all(false, false, true);
