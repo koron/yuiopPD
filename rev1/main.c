@@ -146,9 +146,9 @@ static void direct_button_task(uint64_t now) {
 int main() {
     xiao_led_init();
     xiao_led_set_all(false, true, false);
+    tusb_init();
     stdio_init_all();
     printf("\nYUIOP/PD rev.1 starting...\n");
-    tusb_init();
 
     // Initialize trackball module. 
     {
@@ -192,11 +192,19 @@ int main() {
     // Start main loop.
     xiao_led_set_all(false, false, true);
 
+    uint64_t last_sec = 0;
+
     while(true) {
         uint64_t now = time_us_64();
         trackball_task(now, &ball);
         direct_button_task(now);
         report_mouse(now);
+
+        uint64_t sec = now / (1000 * 1000);
+        if (sec != last_sec && (sec % 5) == 0) {
+            printf("YUIOP/PD: heartbeat at %llu seconds\n", sec);
+            last_sec = sec;
+        }
 
         tud_task();
     }

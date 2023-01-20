@@ -2,8 +2,9 @@
 
 // Interface ID
 enum {
-    ITF_NUM_HID,
-    ITF_NUM_TOTAL
+    ITF_NUM_HID     = 0,
+    ITF_NUM_CDC     = 1, // CDC requires 2 interfaces.
+    ITF_NUM_TOTAL   = 3,
 };
 
 // HID report ID
