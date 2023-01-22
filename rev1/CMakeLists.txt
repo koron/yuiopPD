@@ -20,10 +20,12 @@ target_compile_definitions(yuiopPD_rev1 PRIVATE
 )
 
 target_link_libraries(yuiopPD_rev1
+    pmw3360
+
     hardware_spi
     pico_binary_info
+    pico_bootsel_via_double_reset
     pico_stdlib
-    pmw3360
     tinyusb_device
     )
 
