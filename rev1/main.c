@@ -77,6 +77,7 @@ static inline int8_t clip2int8(int16_t v) {
     return (v) < -127 ? -127 : (v) > 127 ? 127 : (int8_t)v;
 }
 
+static int mouse_mode = 0;
 static void report_mouse(uint64_t now) {
     if (!tud_hid_n_ready(ITF_NUM_HID)) {
         return;
@@ -95,16 +96,30 @@ static void report_mouse(uint64_t now) {
         }
     }
 
-    x = clip2int8(mouse_x);
-    y = clip2int8(mouse_y);
-    mouse_x -= x;
-    mouse_y -= y;
+    switch (mouse_mode) {
+        case 1:
+            int div = 5;
+            v = (clip2int8(mouse_y) >> div);
+            mouse_x = 0;
+            mouse_y -= v << div;
+            v = -v;
+            break;
+
+        default:
+            x = clip2int8(mouse_x);
+            y = clip2int8(mouse_y);
+            mouse_x -= x;
+            mouse_y -= y;
+            break;
+    }
 
     if (x != 0 || y != 0 || v != 0 || h != 0 || btns != mouse_last_btns) {
         tud_hid_n_mouse_report(ITF_NUM_HID, REPORT_ID_MOUSE, btns, x, y, v, h);
         mouse_last_btns = btns;
     }
 }
+
+static bool trackball_enabled = true;
 
 static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     // Limitate scan rate: 1000/sec
@@ -122,13 +137,17 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     // Read motion data from PMW3360 optical sensor, and accumulate it.
     pmw3360_motion_t mot = {0};
     if (pmw3360_read_motion_burst(ball, &mot)) {
-        mouse_x = add16(mouse_x, mot.dy);
-        mouse_y = add16(mouse_y, mot.dx);
-        xiao_led_set_all(false, true, false);
+        if (trackball_enabled) {
+            mouse_x = add16(mouse_x, mot.dy);
+            mouse_y = add16(mouse_y, mot.dx);
+            xiao_led_set_all(false, true, false);
+        }
     } else {
         xiao_led_set_all(false, false, true);
     }
 }
+
+void direct_button_on_changed(uint64_t now, int num, bool pressed);
 
 static void direct_button_task(uint64_t now) {
     // Read direct pins as button.
@@ -139,7 +158,29 @@ static void direct_button_task(uint64_t now) {
         if (curr != direct_buttons[i].pressed && (now - direct_buttons[i].changed_at) > 10*1000) {
             direct_buttons[i].pressed = curr;
             direct_buttons[i].changed_at = now;
+            direct_button_on_changed(now, i, curr);
         }
+    }
+}
+
+void direct_button_on_changed(uint64_t now, int num, bool pressed) {
+    printf("direct_button_on_changed: num=%d pressed=%s now=%llu\n", num, pressed ? "true" : "false", now);
+
+    if (num == 2) {
+        // Toggle trackball enable/disable
+        if (pressed) {
+            trackball_enabled = !trackball_enabled;
+            printf("  trackball_enabled=%s\n", trackball_enabled ? "true" : "false");
+        }
+        return;
+    }
+
+    if (num == 5) {
+        // Scroll mode when pressed.
+        mouse_mode = pressed ? 1 : 0;
+        mouse_x = 0;
+        mouse_y = 0;
+        return;
     }
 }
 
