@@ -10,8 +10,11 @@ set(PICO_BOARD seeed_xiao_rp2040)
 
 pico_sdk_init()
 
+
 add_subdirectory(direct_button)
 add_subdirectory(pmw3360)
+add_subdirectory(xiao_led)
+
 add_subdirectory(rev1)
 
 # vim:set ts=8 sts=4 sw=4 tw=0 et:
