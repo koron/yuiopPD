@@ -18,13 +18,15 @@ bi_decl(bi_1pin_with_name(PICO_DEFAULT_WS2812_POWER_PIN, "NeoPixel power"));
 bi_decl(bi_program_feature("USB Mouse"));
 
 static direct_button_t direct_buttons[] = {
-    { .pin = 26, .pressed = false, .changed_at = 0, .mouse_button =  0 },
-    { .pin = 27, .pressed = false, .changed_at = 0, .mouse_button =  1 },
-    { .pin = 28, .pressed = false, .changed_at = 0, .mouse_button = -1 },
-    { .pin = 29, .pressed = false, .changed_at = 0, .mouse_button =  4 },
-    { .pin =  6, .pressed = false, .changed_at = 0, .mouse_button =  3 },
-    { .pin =  7, .pressed = false, .changed_at = 0, .mouse_button = -1 },
+    { .pin = 26, .pressed = false, .changed_at = 0 },
+    { .pin = 27, .pressed = false, .changed_at = 0 },
+    { .pin = 28, .pressed = false, .changed_at = 0 },
+    { .pin = 29, .pressed = false, .changed_at = 0 },
+    { .pin =  6, .pressed = false, .changed_at = 0 },
+    { .pin =  7, .pressed = false, .changed_at = 0 },
 };
+
+static int button_actions[] = { 0, 1, -1, 4, 3, -1 };
 
 static int16_t mouse_x = 0;
 static int16_t mouse_y = 0;
@@ -60,9 +62,8 @@ static void report_mouse(uint64_t now) {
     int8_t h = 0;
 
     for (int i = 0; i < count_of(direct_buttons); i++) {
-        direct_button_t b = direct_buttons[i];
-        if (b.pressed && b.mouse_button >= 0) {
-            btns |= 1 << b.mouse_button;
+        if (direct_buttons[i].pressed && button_actions[i] >= 0) {
+            btns |= 1 << button_actions[i];
         }
     }
 

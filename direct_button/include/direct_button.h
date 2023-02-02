@@ -4,7 +4,6 @@ typedef struct {
     uint     pin;
     bool     pressed;
     uint64_t changed_at;
-    int      mouse_button;
 } direct_button_t;
 
 void direct_button_init(direct_button_t *buttons, int count);
