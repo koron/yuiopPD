@@ -23,6 +23,7 @@ target_link_libraries(yuiopPD_rev1
     direct_button
     pmw3360
     xiao_led
+    usb_mouse
 
     hardware_spi
     pico_binary_info
