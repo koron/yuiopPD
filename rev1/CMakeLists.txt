@@ -20,6 +20,7 @@ target_compile_definitions(yuiopPD_rev1 PRIVATE
 )
 
 target_link_libraries(yuiopPD_rev1
+    direct_button
     pmw3360
 
     hardware_spi

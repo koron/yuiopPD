@@ -5,6 +5,7 @@
 #include <hardware/spi.h>
 #include <tusb.h>
 
+#include "direct_button.h"
 #include "pmw3360.h"
 #include "pmw3360_rp2040.h"
 #include "usb_descriptors.h"
@@ -39,14 +40,6 @@ void xiao_led_set_all(bool red, bool green, bool blue) {
 }
 
 bi_decl(bi_program_feature("USB Mouse"));
-bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
-
-typedef struct {
-    uint pin;
-    bool pressed;
-    uint64_t changed_at;
-    int mouse_button;
-} direct_button_t;
 
 static direct_button_t direct_buttons[] = {
     { .pin = 26, .pressed = false, .changed_at = 0, .mouse_button =  0 },
@@ -78,6 +71,7 @@ static inline int8_t clip2int8(int16_t v) {
 }
 
 static int mouse_mode = 0;
+
 static void report_mouse(uint64_t now) {
     if (!tud_hid_n_ready(ITF_NUM_HID)) {
         return;
@@ -147,22 +141,6 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     }
 }
 
-void direct_button_on_changed(uint64_t now, int num, bool pressed);
-
-static void direct_button_task(uint64_t now) {
-    // Read direct pins as button.
-    uint32_t status = gpio_get_all();
-    // Debounce buttons.
-    for (int i = 0; i < count_of(direct_buttons); i++) {
-        bool curr = (status & (1 << direct_buttons[i].pin)) == 0;
-        if (curr != direct_buttons[i].pressed && (now - direct_buttons[i].changed_at) > 10*1000) {
-            direct_buttons[i].pressed = curr;
-            direct_buttons[i].changed_at = now;
-            direct_button_on_changed(now, i, curr);
-        }
-    }
-}
-
 void direct_button_on_changed(uint64_t now, int num, bool pressed) {
     printf("direct_button_on_changed: num=%d pressed=%s now=%llu\n", num, pressed ? "true" : "false", now);
 
@@ -206,12 +184,10 @@ int main() {
         spi_init(spi0, 2*1000*1000);
     }
 
-    // Initialize pins for button.
-    for (int i = 0; i < count_of(direct_buttons); i++) {
-        uint pin = direct_buttons[i].pin;
-        gpio_init(pin);
-        gpio_set_dir(pin, GPIO_IN);
-        gpio_pull_up(pin);
+    // Initialize buttons.
+    {
+        direct_button_init(direct_buttons, count_of(direct_buttons));
+        bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
     }
 
     // Initialize the trackball module.

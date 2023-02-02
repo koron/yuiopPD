@@ -10,6 +10,7 @@ set(PICO_BOARD seeed_xiao_rp2040)
 
 pico_sdk_init()
 
+add_subdirectory(direct_button)
 add_subdirectory(pmw3360)
 add_subdirectory(rev1)
 
