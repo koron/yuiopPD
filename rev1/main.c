@@ -146,6 +146,12 @@ int main() {
     stdio_init_all();
     printf("\nYUIOP/PD rev.1 starting...\n");
 
+    // Initialize buttons.
+    {
+        direct_button_init(direct_buttons, count_of(direct_buttons));
+        bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
+    }
+
     // Initialize trackball module. 
     {
         gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
@@ -159,12 +165,6 @@ int main() {
         bi_decl(bi_1pin_with_name(PICO_DEFAULT_SPI_CSN_PIN, "SPI0 CS"));
 
         spi_init(spi0, 2*1000*1000);
-    }
-
-    // Initialize buttons.
-    {
-        direct_button_init(direct_buttons, count_of(direct_buttons));
-        bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
     }
 
     // Initialize the trackball module.
