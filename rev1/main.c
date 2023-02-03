@@ -5,57 +5,28 @@
 #include <hardware/spi.h>
 #include <tusb.h>
 
+#include "direct_button.h"
 #include "pmw3360.h"
 #include "pmw3360_rp2040.h"
-#include "usb_descriptors.h"
+#include "xiao/led.h"
 
-#define XIAO_RED_LED_PIN    17
-#define XIAO_GREEN_LED_PIN  16
-#define XIAO_BLUE_LED_PIN   25
+#include "usb_descriptors.h"
 
 bi_decl(bi_1pin_with_name(PICO_DEFAULT_WS2812_PIN, "NeoPixel DATA"));
 bi_decl(bi_1pin_with_name(PICO_DEFAULT_WS2812_POWER_PIN, "NeoPixel power"));
 
-void xiao_led_init() {
-    gpio_init(XIAO_RED_LED_PIN);
-    gpio_set_dir(XIAO_RED_LED_PIN, GPIO_OUT);
-    gpio_init(XIAO_GREEN_LED_PIN);
-    gpio_set_dir(XIAO_GREEN_LED_PIN, GPIO_OUT);
-    gpio_init(XIAO_BLUE_LED_PIN);
-    gpio_set_dir(XIAO_BLUE_LED_PIN, GPIO_OUT);
-    bi_decl(bi_1pin_with_name(XIAO_RED_LED_PIN, "Red LED"));
-    bi_decl(bi_1pin_with_name(XIAO_GREEN_LED_PIN, "Green LED"));
-    bi_decl(bi_1pin_with_name(XIAO_BLUE_LED_PIN, "Blue LED"));
-}
-
-void xiao_led_set_all(bool red, bool green, bool blue) {
-    uint32_t mask = (1 << XIAO_RED_LED_PIN) |
-        (1 << XIAO_GREEN_LED_PIN) |
-        (1 << XIAO_BLUE_LED_PIN);
-    uint32_t value = (red ? 0 : (1 << XIAO_RED_LED_PIN)) |
-            (green ? 0 : (1 << XIAO_GREEN_LED_PIN)) |
-            (blue ? 0 : (1 << XIAO_BLUE_LED_PIN));
-    gpio_put_masked(mask, value);
-}
-
 bi_decl(bi_program_feature("USB Mouse"));
-bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
-
-typedef struct {
-    uint pin;
-    bool pressed;
-    uint64_t changed_at;
-    int mouse_button;
-} direct_button_t;
 
 static direct_button_t direct_buttons[] = {
-    { .pin = 26, .pressed = false, .changed_at = 0, .mouse_button =  0 },
-    { .pin = 27, .pressed = false, .changed_at = 0, .mouse_button =  1 },
-    { .pin = 28, .pressed = false, .changed_at = 0, .mouse_button = -1 },
-    { .pin = 29, .pressed = false, .changed_at = 0, .mouse_button =  4 },
-    { .pin =  6, .pressed = false, .changed_at = 0, .mouse_button =  3 },
-    { .pin =  7, .pressed = false, .changed_at = 0, .mouse_button = -1 },
+    { .pin = 26, .pressed = false, .changed_at = 0 },
+    { .pin = 27, .pressed = false, .changed_at = 0 },
+    { .pin = 28, .pressed = false, .changed_at = 0 },
+    { .pin = 29, .pressed = false, .changed_at = 0 },
+    { .pin =  6, .pressed = false, .changed_at = 0 },
+    { .pin =  7, .pressed = false, .changed_at = 0 },
 };
+
+static int button_actions[] = { 0, 1, -1, 4, 3, -1 };
 
 static int16_t mouse_x = 0;
 static int16_t mouse_y = 0;
@@ -78,6 +49,7 @@ static inline int8_t clip2int8(int16_t v) {
 }
 
 static int mouse_mode = 0;
+
 static void report_mouse(uint64_t now) {
     if (!tud_hid_n_ready(ITF_NUM_HID)) {
         return;
@@ -90,9 +62,8 @@ static void report_mouse(uint64_t now) {
     int8_t h = 0;
 
     for (int i = 0; i < count_of(direct_buttons); i++) {
-        direct_button_t b = direct_buttons[i];
-        if (b.pressed && b.mouse_button >= 0) {
-            btns |= 1 << b.mouse_button;
+        if (direct_buttons[i].pressed && button_actions[i] >= 0) {
+            btns |= 1 << button_actions[i];
         }
     }
 
@@ -147,22 +118,6 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     }
 }
 
-void direct_button_on_changed(uint64_t now, int num, bool pressed);
-
-static void direct_button_task(uint64_t now) {
-    // Read direct pins as button.
-    uint32_t status = gpio_get_all();
-    // Debounce buttons.
-    for (int i = 0; i < count_of(direct_buttons); i++) {
-        bool curr = (status & (1 << direct_buttons[i].pin)) == 0;
-        if (curr != direct_buttons[i].pressed && (now - direct_buttons[i].changed_at) > 10*1000) {
-            direct_buttons[i].pressed = curr;
-            direct_buttons[i].changed_at = now;
-            direct_button_on_changed(now, i, curr);
-        }
-    }
-}
-
 void direct_button_on_changed(uint64_t now, int num, bool pressed) {
     printf("direct_button_on_changed: num=%d pressed=%s now=%llu\n", num, pressed ? "true" : "false", now);
 
@@ -191,6 +146,12 @@ int main() {
     stdio_init_all();
     printf("\nYUIOP/PD rev.1 starting...\n");
 
+    // Initialize buttons.
+    {
+        direct_button_init(direct_buttons, count_of(direct_buttons));
+        bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
+    }
+
     // Initialize trackball module. 
     {
         gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
@@ -204,14 +165,6 @@ int main() {
         bi_decl(bi_1pin_with_name(PICO_DEFAULT_SPI_CSN_PIN, "SPI0 CS"));
 
         spi_init(spi0, 2*1000*1000);
-    }
-
-    // Initialize pins for button.
-    for (int i = 0; i < count_of(direct_buttons); i++) {
-        uint pin = direct_buttons[i].pin;
-        gpio_init(pin);
-        gpio_set_dir(pin, GPIO_IN);
-        gpio_pull_up(pin);
     }
 
     // Initialize the trackball module.
