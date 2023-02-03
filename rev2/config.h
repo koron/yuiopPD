@@ -1,0 +1,13 @@
+#pragma once
+
+//////////////////////////////////////////////////////////////////////////////
+// for usb_descriptors.c
+
+#define VENDOR_ID       0x7890
+#define PRODUCT_ID      0x8002
+#define DEVICE_VER      0x0002
+#define MANUFACTURER    koron
+#define PRODUCT         YUIOP/PD rev.2
+
+//////////////////////////////////////////////////////////////////////////////
+// development flags

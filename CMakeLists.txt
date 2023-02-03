@@ -17,5 +17,6 @@ add_subdirectory(xiao_led)
 add_subdirectory(usb_mouse)
 
 add_subdirectory(rev1)
+add_subdirectory(rev2)
 
 # vim:set ts=8 sts=4 sw=4 tw=0 et:
