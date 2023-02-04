@@ -50,6 +50,8 @@ static inline int8_t clip2int8(int16_t v) {
 
 static int mouse_mode = 0;
 
+const static int DIV = 5;
+
 static void report_mouse(uint64_t now) {
     if (!tud_hid_n_ready(ITF_NUM_HID)) {
         return;
@@ -69,10 +71,9 @@ static void report_mouse(uint64_t now) {
 
     switch (mouse_mode) {
         case 1:
-            int div = 5;
-            v = (clip2int8(mouse_y) >> div);
+            v = (clip2int8(mouse_y) >> DIV);
             mouse_x = 0;
-            mouse_y -= v << div;
+            mouse_y -= v << DIV;
             v = -v;
             break;
 
