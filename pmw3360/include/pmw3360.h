@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "hardware/spi.h"
+
 typedef enum {
     PMW3360_REGADDR_PRODUCT_ID                 = 0x00,
     PMW3360_REGADDR_REVISION_ID                = 0x01,
@@ -55,9 +57,12 @@ typedef enum {
     PMW3360_REGADDR_LIFTCUTOFF_TUNE2           = 0x65,
 } pmw3360_regaddr_t;
 
-typedef struct pmw3360_inst pmw3360_inst_t;
+typedef struct {
+    spi_inst_t *spi;
+    uint        csn;
+} pmw3360_inst_t;
 
-// void pmw3360_inst_rp2040(pmw3360_inst_t *p, ...);
+void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn);
 
 uint8_t pmw3360_reg_read(pmw3360_inst_t *p, uint8_t addr);
 

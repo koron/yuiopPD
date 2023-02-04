@@ -7,7 +7,6 @@
 
 #include "direct_button.h"
 #include "pmw3360.h"
-#include "pmw3360_rp2040.h"
 #include "xiao/led.h"
 #include "usb/mouse.h"
 
@@ -45,7 +44,7 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     }
     last = now;
 
-#if 1
+#if 0
     // PMW3360's motion burst fails without writing the register sometimes.
     pmw3360_reg_write(ball, PMW3360_REGADDR_MOTION_BURST, 0);
 #endif
@@ -124,7 +123,7 @@ int main() {
 
     // Initialize the trackball module.
     pmw3360_inst_t ball;
-    pmw3360_init_rp2040(&ball, spi0, PICO_DEFAULT_SPI_CSN_PIN);
+    pmw3360_init(&ball, spi0, PICO_DEFAULT_SPI_CSN_PIN);
     bool ball_ok = pmw3360_powerup_reset(&ball);
     if (!ball_ok) {
         xiao_led_set_all(true, false, false);

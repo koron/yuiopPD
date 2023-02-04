@@ -1,9 +1,10 @@
+#include <stdio.h>
+
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "hardware/timer.h"
 
 #include "pmw3360.h"
-#include "pmw3360_rp2040.h"
 
 static inline void cs_select(pmw3360_inst_t *p) {
     //asm volatile("nop \n nop \n nop");
@@ -37,7 +38,7 @@ void pmw3360_reg_write(pmw3360_inst_t *p, uint8_t addr, uint8_t data) {
     busy_wait_us_32(180);
 }
 
-void pmw3360_init_rp2040(pmw3360_inst_t *p, spi_inst_t *spi, uint csn) {
+void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn) {
     p->spi = spi;
     p->csn = csn;
     spi_set_format(p->spi, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
@@ -45,7 +46,7 @@ void pmw3360_init_rp2040(pmw3360_inst_t *p, spi_inst_t *spi, uint csn) {
 
 bool pmw3360_powerup_reset(pmw3360_inst_t *p) {
     pmw3360_reg_write(p, PMW3360_REGADDR_POWER_UP_RESET, 0x5a);
-    busy_wait_us_32(50);
+    busy_wait_ms(50);
     pmw3360_reg_read(p, PMW3360_REGADDR_MOTION);
     pmw3360_reg_read(p, PMW3360_REGADDR_DELTA_X_L);
     pmw3360_reg_read(p, PMW3360_REGADDR_DELTA_X_H);
@@ -63,22 +64,27 @@ bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out) {
     uint8_t addr = PMW3360_REGADDR_MOTION_BURST;
     spi_write_blocking(p->spi, &addr, 1);
     busy_wait_us_32(35);
-    uint8_t mot;
-    spi_read_blocking(p->spi, 0x00, &mot, 1);
-    if ((mot & 0x88) != 0x80) {
-        out->mot = mot;
-        goto MOTION_BURST_END;
-    }
-    uint8_t data[5] = {0};
-    spi_read_blocking(p->spi, 0x00, data, 5);
-    out->mot = mot;
-    out->obs = data[0];
-    out->dx = data[1] | (data[2] << 8);
-    out->dy = data[3] | (data[4] << 8);
-    retval = true;
-
-MOTION_BURST_END:
+    uint8_t buf[12];
+    spi_read_blocking(p->spi, 0x00, buf, sizeof(buf));
     cs_deselect(p);
+    // Required NCS in 500ns after motion burst.
     busy_wait_us_32(1);
-    return retval;
+
+#if 1
+    // DEBUG: log motion burst data each seconds.
+    static uint64_t last = 0;
+    uint64_t now = time_us_64();
+    if (now - last > 1000000) {
+        last = now;
+        printf("motion_burst capture: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]);
+    }
+#endif
+
+    // Parse motion burst data.
+    out->mot = buf[0];
+    out->obs = buf[1];
+    out->dx = buf[2] | (buf[3] << 8);
+    out->dy = buf[4] | (buf[5] << 8);
+
+    return out->dx != 0 || out->dy != 0;
 }
