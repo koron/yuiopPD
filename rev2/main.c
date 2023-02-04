@@ -26,7 +26,7 @@ static direct_button_t direct_buttons[] = {
     { .pin =  0, .pressed = false, .changed_at = 0 },
 };
 
-static int button_actions[] = { -1, 0, 1, 3, -1 };
+static int button_actions[] = { -1, 0, 3, 1, 4 };
 
 typedef enum {
     TRACKBALL_MODE_DISABLED = 0,
@@ -69,6 +69,7 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
 void direct_button_on_changed(uint64_t now, int num, bool pressed) {
     printf("direct_button_on_changed: num=%d pressed=%s now=%llu\n", num, pressed ? "true" : "false", now);
 
+#if 0
     if (num == 4) {
         // Toggle trackball enable/disable
         if (pressed) {
@@ -76,6 +77,7 @@ void direct_button_on_changed(uint64_t now, int num, bool pressed) {
         }
         return;
     }
+#endif
 
     if (num == 0) {
         // Scroll mode when pressed.
