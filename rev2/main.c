@@ -44,7 +44,7 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     }
     last = now;
 
-#if 1
+#if 0
     // PMW3360's motion burst fails without writing the register sometimes.
     pmw3360_reg_write(ball, PMW3360_REGADDR_MOTION_BURST, 0);
 #endif
