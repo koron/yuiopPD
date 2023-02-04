@@ -5,7 +5,6 @@
 #include "hardware/timer.h"
 
 #include "pmw3360.h"
-#include "pmw3360_rp2040.h"
 
 static inline void cs_select(pmw3360_inst_t *p) {
     //asm volatile("nop \n nop \n nop");
@@ -39,7 +38,7 @@ void pmw3360_reg_write(pmw3360_inst_t *p, uint8_t addr, uint8_t data) {
     busy_wait_us_32(180);
 }
 
-void pmw3360_init_rp2040(pmw3360_inst_t *p, spi_inst_t *spi, uint csn) {
+void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn) {
     p->spi = spi;
     p->csn = csn;
     spi_set_format(p->spi, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
