@@ -43,11 +43,6 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     }
     last = now;
 
-#if 0
-    // PMW3360's motion burst fails without writing the register sometimes.
-    pmw3360_reg_write(ball, PMW3360_REGADDR_MOTION_BURST, 0);
-#endif
-
     // Read motion data from PMW3360 optical sensor, and accumulate it.
     pmw3360_motion_t mot = {0};
     if (pmw3360_read_motion_burst(ball, &mot)) {
@@ -135,8 +130,6 @@ int main() {
 
     // Set 2000 CPI (DPI)
     pmw3360_reg_write(&ball, PMW3360_REGADDR_CONFIG1, 19);
-    // Set motion burst mode.
-    pmw3360_reg_write(&ball, PMW3360_REGADDR_MOTION_BURST, 0);
 
     // Setup USB mouse.
     usb_mouse_init(ITF_NUM_HID, REPORT_ID_MOUSE);

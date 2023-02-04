@@ -57,18 +57,34 @@ bool pmw3360_powerup_reset(pmw3360_inst_t *p) {
     return pid = 0x42 && rev == 0x01;
 }
 
-bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out) {
-    bool retval = false;
+// read_motion_burst try to read motion burst data, returns false if motion
+// burst is not started.
+static bool read_motion_burst(pmw3360_inst_t *p, uint8_t *buf12) {
     cs_select(p);
-
     uint8_t addr = PMW3360_REGADDR_MOTION_BURST;
     spi_write_blocking(p->spi, &addr, 1);
     busy_wait_us_32(35);
-    uint8_t buf[12];
-    spi_read_blocking(p->spi, 0x00, buf, sizeof(buf));
+    spi_read_blocking(p->spi, 0x00, buf12, 12);
     cs_deselect(p);
     // Required NCS in 500ns after motion burst.
     busy_wait_us_32(1);
+    // Check 5th bit "1" when motion burst enabled correctly.
+    return (buf12[0] & 0x20) != 0;
+}
+
+// reand motion burst data, return true if valid (non zero) motion.
+bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out) {
+    uint8_t buf[12];
+    if (!read_motion_burst(p, buf)) {
+        // Auto motion burst. Setup motion burst if motion burst is not
+        // started.
+        pmw3360_reg_write(p, PMW3360_REGADDR_MOTION_BURST, 0);
+        if (!read_motion_burst(p, buf)) {
+            printf("pmw3360_read_motion_burst: auto burst failed\n");
+            return false;
+        }
+        printf("pmw3360_read_motion_burst: auto burst setup\n");
+    }
 
 #if 1
     // DEBUG: log motion burst data each seconds.
