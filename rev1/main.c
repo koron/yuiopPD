@@ -152,7 +152,7 @@ int main() {
         bi_decl(bi_pin_mask_with_name(0x3c0000c0, "Buttons"));
     }
 
-    // Initialize trackball module. 
+    // Initialize trackball module.
     {
         gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
         gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);

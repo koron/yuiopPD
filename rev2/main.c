@@ -9,6 +9,7 @@
 #include "pmw3360.h"
 #include "pmw3360_rp2040.h"
 #include "xiao/led.h"
+#include "usb/mouse.h"
 
 #include "usb_descriptors.h"
 
@@ -27,69 +28,13 @@ static direct_button_t direct_buttons[] = {
 
 static int button_actions[] = { -1, 0, 1, 3, -1 };
 
-static int16_t mouse_x = 0;
-static int16_t mouse_y = 0;
-static int8_t mouse_last_btns = false;
+typedef enum {
+    TRACKBALL_MODE_DISABLED = 0,
+    TRACKBALL_MODE_POINTER  = 1,
+    TRACKBALL_MODE_SCROLL   = 2,
+} trackball_mode_t;
 
-// add16 adds two int16_t with clipping.
-static int16_t add16(int16_t a, int16_t b) {
-    int16_t r = a + b;
-    if (a >= 0 && b >= 0 && r < 0) {
-        r = 32767;
-    } else if (a < 0 && b < 0 && r >= 0) {
-        r = -32768;
-    }
-    return r;
-}
-
-// clip2int8 clips an integer fit into int8_t.
-static inline int8_t clip2int8(int16_t v) {
-    return (v) < -127 ? -127 : (v) > 127 ? 127 : (int8_t)v;
-}
-
-static int mouse_mode = 0;
-
-static void report_mouse(uint64_t now) {
-    if (!tud_hid_n_ready(ITF_NUM_HID)) {
-        return;
-    }
-
-    uint8_t btns = 0;
-    int8_t x = 0;
-    int8_t y = 0;
-    int8_t v = 0;
-    int8_t h = 0;
-
-    for (int i = 0; i < count_of(direct_buttons); i++) {
-        if (direct_buttons[i].pressed && button_actions[i] >= 0) {
-            btns |= 1 << button_actions[i];
-        }
-    }
-
-    switch (mouse_mode) {
-        case 1:
-            int div = 5;
-            v = (clip2int8(mouse_y) >> div);
-            mouse_x = 0;
-            mouse_y -= v << div;
-            v = -v;
-            break;
-
-        default:
-            x = clip2int8(mouse_x);
-            y = clip2int8(mouse_y);
-            mouse_x -= x;
-            mouse_y -= y;
-            break;
-    }
-
-    if (x != 0 || y != 0 || v != 0 || h != 0 || btns != mouse_last_btns) {
-        tud_hid_n_mouse_report(ITF_NUM_HID, REPORT_ID_MOUSE, btns, x, y, v, h);
-        mouse_last_btns = btns;
-    }
-}
-
-static bool trackball_enabled = true;
+static trackball_mode_t trackball_mode = TRACKBALL_MODE_POINTER;
 
 static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     // Limitate scan rate: 1000/sec
@@ -107,11 +52,15 @@ static void trackball_task(uint64_t now, pmw3360_inst_t *ball) {
     // Read motion data from PMW3360 optical sensor, and accumulate it.
     pmw3360_motion_t mot = {0};
     if (pmw3360_read_motion_burst(ball, &mot)) {
-        if (trackball_enabled) {
-            mouse_x = add16(mouse_x, mot.dy);
-            mouse_y = add16(mouse_y, mot.dx);
-            xiao_led_set_all(false, true, false);
+        switch (trackball_mode) {
+            case TRACKBALL_MODE_POINTER:
+                usb_mouse_xy_append(mot.dy, mot.dx);
+                break;
+            case TRACKBALL_MODE_SCROLL:
+                usb_mouse_vh_append(-mot.dx, 0);
+                break;
         }
+        xiao_led_set_all(false, true, false);
     } else {
         xiao_led_set_all(false, false, true);
     }
@@ -123,18 +72,24 @@ void direct_button_on_changed(uint64_t now, int num, bool pressed) {
     if (num == 4) {
         // Toggle trackball enable/disable
         if (pressed) {
-            trackball_enabled = !trackball_enabled;
-            printf("  trackball_enabled=%s\n", trackball_enabled ? "true" : "false");
+            trackball_mode = trackball_mode != TRACKBALL_MODE_DISABLED ? TRACKBALL_MODE_DISABLED : TRACKBALL_MODE_POINTER;
         }
         return;
     }
 
     if (num == 0) {
         // Scroll mode when pressed.
-        mouse_mode = pressed ? 1 : 0;
-        mouse_x = 0;
-        mouse_y = 0;
+        if (trackball_mode != TRACKBALL_MODE_DISABLED) {
+            trackball_mode = pressed ? TRACKBALL_MODE_SCROLL : TRACKBALL_MODE_POINTER;
+        }
+        usb_mouse_xy_reset();
+        usb_mouse_vh_reset();
         return;
+    }
+
+    int ba = button_actions[num];
+    if (ba >= 0) {
+        usb_mouse_set_button((uint8_t)ba, pressed);
     }
 }
 
@@ -151,7 +106,7 @@ int main() {
         bi_decl(bi_pin_mask_with_name(0x3c000001, "Buttons"));
     }
 
-    // Initialize trackball module. 
+    // Initialize trackball module.
     {
         gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
         gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
@@ -182,6 +137,10 @@ int main() {
     // Set motion burst mode.
     pmw3360_reg_write(&ball, PMW3360_REGADDR_MOTION_BURST, 0);
 
+    // Setup USB mouse.
+    usb_mouse_init(ITF_NUM_HID, REPORT_ID_MOUSE);
+    usb_mouse_set_div_v(5);
+
     // Start main loop.
     xiao_led_set_all(false, false, true);
 
@@ -189,9 +148,9 @@ int main() {
 
     while(true) {
         uint64_t now = time_us_64();
-        trackball_task(now, &ball);
         direct_button_task(now);
-        report_mouse(now);
+        trackball_task(now, &ball);
+        usb_mouse_task(now);
 
         uint64_t sec = now / (1000 * 1000);
         if (sec != last_sec && (sec % 5) == 0) {
