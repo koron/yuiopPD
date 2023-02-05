@@ -24,6 +24,7 @@ target_link_libraries(yuiopPD_rev2
     pmw3360
     xiao_led
     usb_mouse
+    heartbeat
 
     hardware_spi
     pico_binary_info
