@@ -12,9 +12,10 @@ pico_sdk_init()
 
 
 add_subdirectory(direct_button)
+add_subdirectory(heartbeat)
 add_subdirectory(pmw3360)
-add_subdirectory(xiao_led)
 add_subdirectory(usb_mouse)
+add_subdirectory(xiao_led)
 
 add_subdirectory(rev1)
 add_subdirectory(rev2)

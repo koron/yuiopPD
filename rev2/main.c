@@ -9,6 +9,7 @@
 #include "pmw3360.h"
 #include "xiao/led.h"
 #include "usb/mouse.h"
+#include "heartbeat.h"
 
 #include "usb_descriptors.h"
 
@@ -92,6 +93,7 @@ void direct_button_on_changed(uint64_t now, int num, bool pressed) {
 int main() {
     xiao_led_init();
     xiao_led_set_all(false, true, false);
+    heartbeat_init(5*1000*1000);
     tusb_init();
     stdio_init_all();
     printf("\nYUIOP/PD rev.2 starting...\n");
@@ -142,16 +144,10 @@ int main() {
 
     while(true) {
         uint64_t now = time_us_64();
+        heartbeat_task(now);
         direct_button_task(now);
         trackball_task(now, &ball);
         usb_mouse_task(now);
-
-        uint64_t sec = now / (1000 * 1000);
-        if (sec != last_sec && (sec % 5) == 0) {
-            printf("YUIOP/PD: heartbeat at %llu seconds\n", sec);
-            last_sec = sec;
-        }
-
         tud_task();
     }
 }
