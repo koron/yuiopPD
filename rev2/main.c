@@ -130,7 +130,7 @@ int main() {
     }
     printf("ball on SPI0 is initialized\n");
 
-    pmw3360_srom_upload(&ball, pmw3360_srom_id4, sizeof(pmw3360_srom_id4));
+    pmw3360_srom_upload(&ball, pmw3360_srom_rev4);
 
     // Set 12000 CPI (DPI) and verify true CPI
     uint8_t cpi = 120;

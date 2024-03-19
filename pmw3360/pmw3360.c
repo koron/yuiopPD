@@ -65,8 +65,7 @@ bool pmw3360_powerup_reset(pmw3360_inst_t *p) {
     return pid == 0x42 && rev == 0x01;
 }
 
-void pmw3360_srom_upload(pmw3360_inst_t *p, const uint8_t *data, size_t len) {
-    printf("pmw3360_srom_upload: len=%d\n", len);
+void pmw3360_srom_upload(pmw3360_inst_t *p, pmw3360_srom_t srom) {
     pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG2, 0);
     pmw3360_reg_write(p, PMW3360_REGADDR_SROM_ENABLE, 0x1d);
     busy_wait_ms(10);
@@ -77,15 +76,15 @@ void pmw3360_srom_upload(pmw3360_inst_t *p, const uint8_t *data, size_t len) {
     uint8_t addr = PMW3360_REGADDR_SROM_LOAD_BURST | 0x80;
     spi_write_blocking(p->spi, &addr, 1);
     busy_wait_us_32(15);
-    for (int i = 0; i < len; i++) {
-        spi_write_blocking(p->spi, &data[i], 1);
+    for (int i = 0; i < srom.len; i++) {
+        spi_write_blocking(p->spi, &srom.data[i], 1);
         busy_wait_us_32(15);
     }
     cs_deselect(p);
     busy_wait_us(200);
 
     uint8_t id = pmw3360_reg_read(p, PMW3360_REGADDR_SROM_ID);
-    printf("pmw3360_srom_upload: uploaded SROM_ID=%02X\n", id);
+    printf("pmw3360: uploaded SROM_ID=%02X\n", id);
     pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG2, 0);
     busy_wait_ms(10);
 }
@@ -124,7 +123,7 @@ bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out) {
     uint64_t now = time_us_64();
     if (now - last > 1000000) {
         last = now;
-        printf("motion_burst capture: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]);
+        printf("pmw3360: raw motion: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10], buf[11]);
     }
 #endif
 

@@ -64,8 +64,6 @@ typedef struct {
     bool motion_bursting;
 } pmw3360_inst_t;
 
-extern const uint8_t pmw3360_srom_id4[4094];
-
 void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn);
 
 uint8_t pmw3360_reg_read(pmw3360_inst_t *p, uint8_t addr);
@@ -74,7 +72,14 @@ void pmw3360_reg_write(pmw3360_inst_t *p, uint8_t addr, uint8_t data);
 
 bool pmw3360_powerup_reset(pmw3360_inst_t *p);
 
-void pmw3360_srom_upload(pmw3360_inst_t *p, const uint8_t *data, size_t len);
+typedef struct {
+    const uint8_t *data;
+    size_t         len;
+} pmw3360_srom_t;
+
+extern const pmw3360_srom_t pmw3360_srom_rev4;
+
+void pmw3360_srom_upload(pmw3360_inst_t *p, pmw3360_srom_t srom);
 
 typedef struct {
     uint8_t mot;
