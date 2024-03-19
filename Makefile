@@ -1,7 +1,7 @@
 default: build/Makefile
 	cmake --build build --parallel 8
 
-build/Makefile:
+build/Makefile: CMakeLists.txt */CMakeLists.txt
 	cmake -B build -DCMAKE_DEPENDS_USE_COMPILER=OFF
 
 .PHONY: clean
