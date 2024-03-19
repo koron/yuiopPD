@@ -60,7 +60,11 @@ typedef enum {
 typedef struct {
     spi_inst_t *spi;
     uint        csn;
+
+    bool motion_bursting;
 } pmw3360_inst_t;
+
+extern const uint8_t pmw3360_srom_id4[4094];
 
 void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn);
 
