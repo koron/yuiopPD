@@ -23,7 +23,7 @@ static direct_button_t direct_buttons[] = {
     { .pin = 27, .pressed = false, .changed_at = 0 },
     { .pin = 28, .pressed = false, .changed_at = 0 },
     { .pin = 29, .pressed = false, .changed_at = 0 },
-    { .pin =  0, .pressed = false, .changed_at = 0 },
+    //{ .pin =  0, .pressed = false, .changed_at = 0 },
 };
 
 static int button_actions[] = { -1, 0, 3, 1, 4 };
