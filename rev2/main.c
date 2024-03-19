@@ -132,11 +132,8 @@ int main() {
 
     pmw3360_srom_upload(&ball, pmw3360_srom_rev4);
 
-    // Set 12000 CPI (DPI) and verify true CPI
-    uint8_t cpi = 120;
-    pmw3360_reg_write(&ball, PMW3360_REGADDR_CONFIG1, cpi - 1);
-    cpi = pmw3360_reg_read(&ball, PMW3360_REGADDR_CONFIG1);
-    printf("true CPI is %d00\n", cpi + 1);
+    // Set 2000 CPI (DPI)
+    pmw3360_set_cpi(&ball, 20);
 
     // Setup USB mouse.
     usb_mouse_init(ITF_NUM_HID, REPORT_ID_MOUSE);

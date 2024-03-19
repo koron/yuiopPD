@@ -48,6 +48,7 @@ void pmw3360_reg_write(pmw3360_inst_t *p, uint8_t addr, uint8_t data) {
 void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn) {
     p->spi = spi;
     p->csn = csn;
+    p->srom_id = 0;
     p->motion_bursting = false;
     spi_set_format(p->spi, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
 }
@@ -83,8 +84,8 @@ void pmw3360_srom_upload(pmw3360_inst_t *p, pmw3360_srom_t srom) {
     cs_deselect(p);
     busy_wait_us(200);
 
-    uint8_t id = pmw3360_reg_read(p, PMW3360_REGADDR_SROM_ID);
-    printf("pmw3360: uploaded SROM_ID=%02X\n", id);
+    p->srom_id = pmw3360_reg_read(p, PMW3360_REGADDR_SROM_ID);
+    printf("pmw3360: uploaded SROM_ID=%02X\n", p->srom_id);
     pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG2, 0);
     busy_wait_ms(10);
 }
@@ -117,7 +118,7 @@ bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out) {
     uint8_t buf[12];
     read_motion_burst(p, buf);
 
-#if 1
+#if 0
     // DEBUG: log motion burst data each seconds.
     static uint64_t last = 0;
     uint64_t now = time_us_64();
@@ -134,4 +135,20 @@ bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out) {
     out->dy = buf[4] | (buf[5] << 8);
 
     return out->dx != 0 || out->dy != 0;
+}
+
+void pmw3360_set_cpi(pmw3360_inst_t *p, uint8_t cpi) {
+    if (cpi == 0) {
+        printf("pmw3360: 0 CPI is ignored\n");
+        return;
+    } else if (p->srom_id == 0 && cpi > 35) {
+        printf("pmw3360: CPI is limited to 3500. SROM upload is required to release this limit\n");
+    } else if (cpi > 120) {
+        printf("pmw3360: CPI is limited to a maximum value of 12000\n");
+    }
+    pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG1, cpi - 1);
+}
+
+uint8_t pmw3360_get_cpi(pmw3360_inst_t *p) {
+    return pmw3360_reg_read(p, PMW3360_REGADDR_CONFIG1) + 1;
 }

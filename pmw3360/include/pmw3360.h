@@ -61,6 +61,7 @@ typedef struct {
     spi_inst_t *spi;
     uint        csn;
 
+    uint8_t srom_id;
     bool motion_bursting;
 } pmw3360_inst_t;
 
@@ -91,3 +92,7 @@ typedef struct {
 void pmw3360_enable_motion_burst(pmw3360_inst_t *p);
 
 bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out);
+
+void pmw3360_set_cpi(pmw3360_inst_t *p, uint8_t cpi);
+
+uint8_t pmw3360_get_cpi(pmw3360_inst_t *p);
