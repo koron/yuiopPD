@@ -25,8 +25,9 @@ uint8_t pmw3360_reg_read(pmw3360_inst_t *p, uint8_t addr) {
     busy_wait_us_32(160);
     uint8_t data = 0;
     spi_read_blocking(p->spi, 0x00, &data, 1);
+    busy_wait_us_32(1);
     cs_deselect(p);
-    busy_wait_us_32(20);
+    busy_wait_us_32(19);
     return data;
 }
 
@@ -34,8 +35,9 @@ void pmw3360_reg_write(pmw3360_inst_t *p, uint8_t addr, uint8_t data) {
     cs_select(p);
     uint8_t buf[2] = { addr | 0x80, data };
     spi_write_blocking(p->spi, buf, 2);
+    busy_wait_us_32(35);
     cs_deselect(p);
-    busy_wait_us_32(180);
+    busy_wait_us_32(145);
 }
 
 void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn) {
