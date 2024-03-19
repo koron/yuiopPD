@@ -60,6 +60,9 @@ typedef enum {
 typedef struct {
     spi_inst_t *spi;
     uint        csn;
+
+    uint8_t srom_id;
+    bool motion_bursting;
 } pmw3360_inst_t;
 
 void pmw3360_init(pmw3360_inst_t *p, spi_inst_t *spi, uint csn);
@@ -71,10 +74,25 @@ void pmw3360_reg_write(pmw3360_inst_t *p, uint8_t addr, uint8_t data);
 bool pmw3360_powerup_reset(pmw3360_inst_t *p);
 
 typedef struct {
+    const uint8_t *data;
+    size_t         len;
+} pmw3360_srom_t;
+
+extern const pmw3360_srom_t pmw3360_srom_rev4;
+
+void pmw3360_srom_upload(pmw3360_inst_t *p, pmw3360_srom_t srom);
+
+typedef struct {
     uint8_t mot;
     uint8_t obs;
     int16_t dx;
     int16_t dy;
 } pmw3360_motion_t;
 
+void pmw3360_enable_motion_burst(pmw3360_inst_t *p);
+
 bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out);
+
+void pmw3360_set_cpi(pmw3360_inst_t *p, uint8_t cpi);
+
+uint8_t pmw3360_get_cpi(pmw3360_inst_t *p);

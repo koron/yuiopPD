@@ -1,8 +1,7 @@
 default: build/Makefile
-	make -j8 -C build
+	cmake --build build --parallel 8
 
-.PHONY: build/Makefile
-build/Makefile:
+build/Makefile: CMakeLists.txt */CMakeLists.txt
 	cmake -B build -DCMAKE_DEPENDS_USE_COMPILER=OFF
 
 .PHONY: clean

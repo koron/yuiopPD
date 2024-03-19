@@ -12,13 +12,13 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Checkout pico-sdk
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: raspberrypi/pico-sdk
-        ref: '1.4.0'
+        ref: '1.5.1'
         path: __pico-sdk__
         submodules: true
 
@@ -29,7 +29,7 @@ jobs:
 
     - run: make
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: firmware-files
         path: |

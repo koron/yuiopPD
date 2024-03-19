@@ -8,13 +8,13 @@ pico_set_program_name(yuiopPD_rev2 "yuiopPD rev.2")
 pico_set_program_url(yuiopPD_rev2 "https://github.com/koron/yuiopPD")
 pico_set_program_description(yuiopPD_rev2 "DIY pointing device")
 
-pico_enable_stdio_uart(yuiopPD_rev2 0)
-pico_enable_stdio_usb(yuiopPD_rev2 1)
+pico_enable_stdio_uart(yuiopPD_rev2 1)
+pico_enable_stdio_usb(yuiopPD_rev2 0)
 
 target_include_directories(yuiopPD_rev2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 target_compile_definitions(yuiopPD_rev2 PRIVATE
-    PICO_DEFAULT_UART_TX_PIN=-1
+    PICO_DEFAULT_UART_TX_PIN=0
     PICO_DEFAULT_UART_RX_PIN=-1
     PICO_DEFAULT_SPI_CSN_PIN=1
 )

@@ -23,7 +23,7 @@ static direct_button_t direct_buttons[] = {
     { .pin = 27, .pressed = false, .changed_at = 0 },
     { .pin = 28, .pressed = false, .changed_at = 0 },
     { .pin = 29, .pressed = false, .changed_at = 0 },
-    { .pin =  0, .pressed = false, .changed_at = 0 },
+    //{ .pin =  0, .pressed = false, .changed_at = 0 },
 };
 
 static int button_actions[] = { -1, 0, 3, 1, 4 };
@@ -130,8 +130,10 @@ int main() {
     }
     printf("ball on SPI0 is initialized\n");
 
+    pmw3360_srom_upload(&ball, pmw3360_srom_rev4);
+
     // Set 2000 CPI (DPI)
-    pmw3360_reg_write(&ball, PMW3360_REGADDR_CONFIG1, 19);
+    pmw3360_set_cpi(&ball, 20);
 
     // Setup USB mouse.
     usb_mouse_init(ITF_NUM_HID, REPORT_ID_MOUSE);
