@@ -56,7 +56,35 @@ bool pmw3360_powerup_reset(pmw3360_inst_t *p) {
     pmw3360_reg_read(p, PMW3360_REGADDR_DELTA_Y_H);
     uint8_t pid = pmw3360_reg_read(p, PMW3360_REGADDR_PRODUCT_ID);
     uint8_t rev = pmw3360_reg_read(p, PMW3360_REGADDR_REVISION_ID);
-    return pid = 0x42 && rev == 0x01;
+    return pid == 0x42 && rev == 0x01;
+}
+
+void pmw3360_srom_upload(pmw3360_inst_t *p, const uint8_t *data, size_t len) {
+    pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG2, 0);
+    pmw3360_reg_write(p, PMW3360_REGADDR_SROM_ENABLE, 0x1d);
+    busy_wait_ms(10);
+    pmw3360_reg_write(p, PMW3360_REGADDR_SROM_ENABLE, 0x18);
+
+    // SROM upload (download for PMW3360) with burst mode
+    cs_select(p);
+    uint8_t addr = PMW3360_REGADDR_SROM_LOAD_BURST | 0x80;
+    spi_write_blocking(p->spi, &addr, 1);
+    busy_wait_us_32(15);
+    for (int i = 0; i < len; i++) {
+        spi_write_blocking(p->spi, &data[i], 1);
+        busy_wait_us_32(15);
+    }
+    cs_deselect(p);
+    busy_wait_us(200);
+
+    uint8_t id = pmw3360_reg_read(p, PMW3360_REGADDR_SROM_ID);
+    printf("pmw3360_srom_upload: uploaded SROM_ID=%02X\n", id);
+    pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG2, 0);
+    busy_wait_ms(10);
+}
+
+void pmw3360_enable_motion_burst(pmw3360_inst_t *p) {
+    pmw3360_reg_write(p, PMW3360_REGADDR_MOTION_BURST, 0);
 }
 
 // read_motion_burst try to read motion burst data, returns false if motion
@@ -80,7 +108,7 @@ bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out) {
     if (!read_motion_burst(p, buf)) {
         // Auto motion burst. Setup motion burst if motion burst is not
         // started.
-        pmw3360_reg_write(p, PMW3360_REGADDR_MOTION_BURST, 0);
+        pmw3360_enable_motion_burst(p);
         if (!read_motion_burst(p, buf)) {
             printf("pmw3360_read_motion_burst: auto burst failed\n");
             return false;

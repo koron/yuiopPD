@@ -90,7 +90,7 @@ void direct_button_on_changed(uint64_t now, int num, bool pressed) {
     }
 }
 
-static const uint8_t srom[4094] = {
+static const uint8_t srom[] = {
     0x01, 0x04, 0x8E, 0x96, 0x6E, 0x77, 0x3E, 0xFE, 0x7E, 0x5F, 0x1D, 0xB8, 0xF2, 0x66, 0x4E, 0xFF,
     0x5D, 0x19, 0xB0, 0xC2, 0x04, 0x69, 0x54, 0x2A, 0xD6, 0x2E, 0xBF, 0xDD, 0x19, 0xB0, 0xC3, 0xE5,
     0x29, 0xB1, 0xE0, 0x23, 0xA5, 0xA9, 0xB1, 0xC1, 0x00, 0x82, 0x67, 0x4C, 0x1A, 0x97, 0x8D, 0x79,
@@ -349,39 +349,6 @@ static const uint8_t srom[4094] = {
     0xC2, 0xE7, 0x4C, 0x1A, 0x97, 0x8D, 0x98, 0xB2, 0xC7, 0x0C, 0x59, 0x28, 0xF3, 0x9B
 };
 
-static void srom_upload(pmw3360_inst_t *p) {
-    printf("srom_upload\n");
-
-    size_t len = sizeof(srom);
-    printf("  length=%d\n", len);
-
-    pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG2, 0);
-    pmw3360_reg_write(p, PMW3360_REGADDR_SROM_ENABLE, 0x1d);
-    busy_wait_ms(10);
-    pmw3360_reg_write(p, PMW3360_REGADDR_SROM_ENABLE, 0x18);
-
-    //asm volatile("nop \n nop \n nop");
-    gpio_put(p->csn, 0);
-    //asm volatile("nop \n nop \n nop");
-    // burst SROM download
-    uint8_t addr = PMW3360_REGADDR_SROM_LOAD_BURST | 0x80;
-    spi_write_blocking(p->spi, &addr, 1);
-    busy_wait_us_32(15);
-    for (int i = 0; i < len; i++) {
-        spi_write_blocking(p->spi, &srom[i], 1);
-        busy_wait_us_32(15);
-    }
-    //asm volatile("nop \n nop \n nop");
-    gpio_put(p->csn, 1);
-    //asm volatile("nop \n nop \n nop");
-    busy_wait_us(200);
-
-    uint8_t id = pmw3360_reg_read(p, PMW3360_REGADDR_SROM_ID);
-    printf("  SROM ID=%02x\n", id);
-    pmw3360_reg_write(p, PMW3360_REGADDR_CONFIG2, 0);
-    busy_wait_ms(10);
-}
-
 int main() {
     xiao_led_init();
     xiao_led_set_all(false, true, false);
@@ -422,14 +389,7 @@ int main() {
     }
     printf("ball on SPI0 is initialized\n");
 
-    srom_upload(&ball);
-
-    // Verify signature
-    //   EXPECTED OUTPUT: signature=42 bd 04
-    uint8_t sig0 = pmw3360_reg_read(&ball, PMW3360_REGADDR_PRODUCT_ID);
-    uint8_t sig1 = pmw3360_reg_read(&ball, PMW3360_REGADDR_INVERSE_PRODUCT_ID);
-    uint8_t sig2 = pmw3360_reg_read(&ball, PMW3360_REGADDR_SROM_ID);
-    printf("  signature=%02x %02x %02x\n", sig0, sig1, sig2);
+    pmw3360_srom_upload(&ball, srom, sizeof(srom));
 
     // Set 12000 CPI (DPI) and verify true CPI
     uint8_t cpi = 120;
@@ -438,8 +398,7 @@ int main() {
     printf("true CPI is %d00\n", cpi + 1);
 
     // Enable motion burst manualy.
-    pmw3360_reg_write(&ball, PMW3360_REGADDR_MOTION_BURST, 0);
-
+    pmw3360_enable_motion_burst(&ball);
 
     // Setup USB mouse.
     usb_mouse_init(ITF_NUM_HID, REPORT_ID_MOUSE);

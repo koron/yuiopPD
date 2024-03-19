@@ -70,11 +70,15 @@ void pmw3360_reg_write(pmw3360_inst_t *p, uint8_t addr, uint8_t data);
 
 bool pmw3360_powerup_reset(pmw3360_inst_t *p);
 
+void pmw3360_srom_upload(pmw3360_inst_t *p, const uint8_t *data, size_t len);
+
 typedef struct {
     uint8_t mot;
     uint8_t obs;
     int16_t dx;
     int16_t dy;
 } pmw3360_motion_t;
+
+void pmw3360_enable_motion_burst(pmw3360_inst_t *p);
 
 bool pmw3360_read_motion_burst(pmw3360_inst_t *p, pmw3360_motion_t *out);
