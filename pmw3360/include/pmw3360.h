@@ -78,7 +78,8 @@ typedef struct {
     size_t         len;
 } pmw3360_srom_t;
 
-extern const pmw3360_srom_t pmw3360_srom_rev4;
+extern const pmw3360_srom_t pmw3360_srom_0x04;
+extern const pmw3360_srom_t pmw3360_srom_0x81;
 
 void pmw3360_srom_upload(pmw3360_inst_t *p, pmw3360_srom_t srom);
 
