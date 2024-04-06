@@ -21,8 +21,9 @@ static inline int8_t clip2int8(int16_t v) {
 }
 
 static inline int8_t consume_int8(int16_t *p, uint8_t div) {
-    int8_t v8 = clip2int8(*p) >> div;
-    *p = *p - (v8 << div);
+    int16_t n = 1 << div;
+    int8_t v8 = clip2int8(*p / n);
+    *p = *p - (v8 * n);
     return v8;
 }
 
